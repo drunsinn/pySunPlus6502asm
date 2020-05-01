@@ -8,17 +8,19 @@ import logging
 
 class Label(object):
     def __init__(self, label_name):
-        self.__value = label_name
+        self.__value = str(label_name)
     def __str__(self):
         return ';' + self.__value
+    def get_name(self):
+        return self.__value
     @staticmethod
     def from_parsing(token):
         #print(token.dump())
-        return Label(token['label'])
+        return Label(token['label'][0])
 
 class Comment(object):
     def __init__(self, comment_text):
-        self.__value = comment_text
+        self.__value = str(comment_text)
     def __str__(self):
         return ';' + self.__value
     @staticmethod
@@ -161,7 +163,8 @@ class AssemblyInstruction(object):
         op_code = token['op_code'].upper()
         return AssemblyInstruction.KNOWN_INSTRUCTIONS.get(op_code, None)
 
-    def __init__(self, inst_data, operand=None):
+    def __init__(self, label, inst_data, operand=None):
+        self.__label = label
         self.__op_code = -1
         self.__num_bytes = -1
         self.__num_cycles = -1
@@ -184,6 +187,9 @@ class AssemblyInstruction(object):
             self.__op_code = inst_data[AddressValue.TYPE_IMPLIED]['opcode']
             self.__num_bytes = inst_data[AddressValue.TYPE_IMPLIED]['numbytes']
             self.__num_cycles = inst_data[AddressValue.TYPE_IMPLIED]['numcycles']
+
+    def get_label(self):
+        return self.__label
 
     def decode_instruction_data(self, instruction_data, operand):
         data = instruction_data.get(operand.get_type(), None)
@@ -221,8 +227,8 @@ class Inst_ADC(AssemblyInstruction):
         #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
         #AddressValue.TYPE_LABEL :                   {'opcode':0x00, 'numbytes':2, 'numcycles':2},
     }
-    def __init__(self, operand):
-        super().__init__(self.INSTRUCTION_DATA, operand)
+    def __init__(self, label, operand):
+        super().__init__(label, self.INSTRUCTION_DATA, operand)
 
 
 class Inst_AND(AssemblyInstruction):
@@ -237,8 +243,8 @@ class Inst_AND(AssemblyInstruction):
         AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
         #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
     }
-    def __init__(self, operand):
-        super().__init__(self.INSTRUCTION_DATA, operand)
+    def __init__(self, label, operand):
+        super().__init__(label, self.INSTRUCTION_DATA, operand)
 
 
 class Inst_ASL(AssemblyInstruction):
@@ -253,126 +259,126 @@ class Inst_ASL(AssemblyInstruction):
         #AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
         #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
     }
-    def __init__(self, operand):
-        super().__init__(self.INSTRUCTION_DATA, operand)
+    def __init__(self, label, operand):
+        super().__init__(label, self.INSTRUCTION_DATA, operand)
 
 
 class Inst_CLC(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x48, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_CLD(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x6A, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_CLI(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x4A, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_CLV(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x78, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_DEX(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE2, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_DEY(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x60, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_INX(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x72, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_INY(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x62, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_NOP(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF2, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_PHA(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x42, 'numbytes':1, 'numcycles':3}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_PHP(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x40, 'numbytes':1, 'numcycles':3}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_PLA(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x52, 'numbytes':1, 'numcycles':4}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_PLP(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x50, 'numbytes':1, 'numcycles':4}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_RTI(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x02, 'numbytes':1, 'numcycles':6}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_RTS(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x12, 'numbytes':1, 'numcycles':6}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_SEC(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x58, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_SED(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x7A, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_SEI(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x5A, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TAX(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF0, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TAY(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x70, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TSX(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF8, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TXA(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE0, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TXS(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE8, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)
 
 class Inst_TYA(AssemblyInstruction):
     INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x68, 'numbytes':1, 'numcycles':2}}
-    def __init__(self):
-        super().__init__(self.INSTRUCTION_DATA)
+    def __init__(self, label):
+        super().__init__(label, self.INSTRUCTION_DATA)

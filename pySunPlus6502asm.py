@@ -24,9 +24,11 @@ class SunPlus6502Assembler(object):
         self.logger = logging.getLogger(__name__)
         self.main_asm_file = main_asm_file
         self.__build_grammar()
-        tokens = self.parse_file(main_asm_file)
-        for i, token in enumerate(tokens):
-            print("%d : %s" % (i, token))
+        instructions = self.parse_file(main_asm_file)
+        for i, instr in enumerate(instructions):
+            print("%d : %s : %s" % (i, type(instr), instr))
+        self.check_labels(instructions)
+
 
     def __build_grammar(self):
         ParserElement.setDefaultWhitespaceChars(' \t')
@@ -41,12 +43,14 @@ class SunPlus6502Assembler(object):
 
         comment_filed = Group(Suppress(Literal(';')) + restOfLine()).setResultsName('comment').setParseAction(Comment.from_parsing)
 
+        include_instruction = Group(Suppress(CaselessKeyword('Include')) + Word(alphanums+'_.') + Optional(comment_filed)).setParseAction(PreInst_Include.from_parsing)
+
         assembly_instruction = Group(Optional(label_field) + op_code_field + Optional(operand_field) + Optional(comment_filed)).setParseAction(SunPlus6502Assembler.parse_op_code)
 
         label_only = Group(label_name + Suppress(Literal(':')) + LineEnd()).setResultsName('label').setParseAction(Label.from_parsing)
         comment_line = Group(Suppress(Literal(';')) + restOfLine()).setResultsName('comment').setParseAction(Comment.from_parsing)
 
-        self.grammar = Or(assembly_instruction | label_only | comment_line)
+        self.grammar = Or(include_instruction | assembly_instruction | label_only | comment_line)
         self.logger.debug('grammer is ready')
 
     def parse_file(self, file_path):
@@ -62,7 +66,8 @@ class SunPlus6502Assembler(object):
                 instr = None
                 try:
                     if len(line) > 0: # filter empty lines
-                        instr = self.grammar.parseString(line)
+                        instr, = self.grammar.parseString(line)
+
                 except ParseException as pe:
                     self.logger.error('parsing faild on line "%s"', line)
                     self.logger.debug('Parse Error: %s', pe)
@@ -70,8 +75,15 @@ class SunPlus6502Assembler(object):
 
                 if instr is not None:
                     if isinstance(instr, PreInst_Include):
-                        include_instr = parse_file(instr.get_filename())
+                        self.logger.debug('Include statement for file: %s', instr.get_filename())
+                        # TODO check if this file was already parsed to make shure we dont run into a infinite loop
+                        include_instr = self.parse_file(instr.get_filename())
                         instructions.extend(include_instr)
+                    elif isinstance(instr, AssemblyInstruction):
+                        # if there was an label infront of the instruction we add them as seperate instructions
+                        if instr.get_label() is not None:
+                            instructions.append(instr.get_label())
+                        instructions.append(instr)
                     else:
                         instructions.append(instr)
                 else:
@@ -168,17 +180,22 @@ class SunPlus6502Assembler(object):
 
     @staticmethod
     def parse_op_code(token):
+        if 'label' in token[0]:
+            label = token[0]['label']
+        else:
+            label = None
+
         op_code = token[0]['op_code']
         if 'operand' in token[0]:
             operand = token[0]['operand']
         else:
             operand = None
         if op_code is AssemblyInstruction.INSTRUCTION_ADC:
-            return Inst_ADC(operand)
+            return Inst_ADC(label, operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_AND:
-            return Inst_AND(operand)
+            return Inst_AND(label, operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_ASL:
-            return Inst_ASL(operand)
+            return Inst_ASL(label, operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_BCC:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_BCS:
@@ -198,15 +215,15 @@ class SunPlus6502Assembler(object):
         elif op_code is AssemblyInstruction.INSTRUCTION_BIT:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_CLC:
-            return Inst_CLC()
+            return Inst_CLC(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_CLD:
-            return Inst_CLD()
+            return Inst_CLD(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_CLI:
-            return Inst_CLI()
+            return Inst_CLI(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_CLR:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_CLV:
-            return Inst_CLV()
+            return Inst_CLV(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_CMP:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_CPX:
@@ -216,17 +233,17 @@ class SunPlus6502Assembler(object):
         elif op_code is AssemblyInstruction.INSTRUCTION_DEC:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_DEX:
-            return Inst_DEX()
+            return Inst_DEX(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_DEY:
-            return Inst_DEY()
+            return Inst_DEY(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_EOR:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_INC:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_INX:
-            return Inst_INX()
+            return Inst_INX(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_INY:
-            return Inst_INY()
+            return Inst_INY(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_JMP:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_JSR:
@@ -240,33 +257,33 @@ class SunPlus6502Assembler(object):
         elif op_code is AssemblyInstruction.INSTRUCTION_LSR:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_NOP:
-            return Inst_NOP()
+            return Inst_NOP(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_ORA:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_PHA:
-            return Inst_PHA()
+            return Inst_PHA(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_PHP:
-            return Inst_PHP()
+            return Inst_PHP(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_PLA:
-            return Inst_PLA()
+            return Inst_PLA(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_PLP:
-            return Inst_PLP()
+            return Inst_PLP(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_ROL:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_ROR:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_RTI:
-            return Inst_RTI()
+            return Inst_RTI(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_RTS:
-            return Inst_RTS()
+            return Inst_RTS(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_SBC:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_SEC:
-            return Inst_SEC()
+            return Inst_SEC(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_SED:
-            return Inst_SED()
+            return Inst_SED(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_SEI:
-            return Inst_SEI()
+            return Inst_SEI(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_SET:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_STA:
@@ -276,24 +293,35 @@ class SunPlus6502Assembler(object):
         elif op_code is AssemblyInstruction.INSTRUCTION_STY:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_TAX:
-            return Inst_TAX()
+            return Inst_TAX(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_TAY:
-            return Inst_TAY()
+            return Inst_TAY(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_TST:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_TSX:
-            return Inst_TSX()
+            return Inst_TSX(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_TXA:
-            return Inst_TXA()
+            return Inst_TXA(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_TXS:
-            return Inst_TXS()
+            return Inst_TXS(label)
         elif op_code is AssemblyInstruction.INSTRUCTION_TYA:
-            return Inst_TYA()
+            return Inst_TYA(label)
         elif 'include' in op_code:
             return PreInst_Include(operand.get_value())
         else:
             print(token.dump())
             raise NotImplementedError('unknown op code %s'%op_code)
+
+    def check_labels(self, instructions):
+        known_label = list()
+        for instr in instructions:
+            if isinstance(instr, Label):
+                if instr.get_name() in known_label:
+                    raise Exception('multible definitions for label %s', instr.get_name())
+                else:
+                    known_label.append(instr.get_name())
+        print(known_label)
+
 
 if __name__ == "__main__":
     import argparse
