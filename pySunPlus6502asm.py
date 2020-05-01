@@ -19,7 +19,7 @@ class PreInst_Include(object):
     def get_filename(self):
         return self.__filename
 
-class FurbyAssembler(object):
+class SunPlus6502Assembler(object):
     def __init__(self, main_asm_file):
         '''steps: - none of this works currently!!!!!!
         1. read file and convert each line to list of objects
@@ -42,11 +42,11 @@ class FurbyAssembler(object):
 
         op_code_field = Word(alphas).setResultsName('op_code').setParseAction(AssemblyInstruction.parse_opcode)
 
-        operand_field = Word(alphanums+'#%$(),_').setResultsName('operand').setParseAction(FurbyAssembler.parse_operand_field)
+        operand_field = Word(alphanums+'#%$(),_').setResultsName('operand').setParseAction(SunPlus6502Assembler.parse_operand_field)
 
         comment_filed = Group(Suppress(Literal(';')) + restOfLine()).setResultsName('comment').setParseAction(Comment.from_parsing)
 
-        assembly_instruction = Group(Optional(label_field) + op_code_field + Optional(operand_field) + Optional(comment_filed)).setParseAction(FurbyAssembler.parse_op_code)
+        assembly_instruction = Group(Optional(label_field) + op_code_field + Optional(operand_field) + Optional(comment_filed)).setParseAction(SunPlus6502Assembler.parse_op_code)
 
         label_only = Group(label_name + Suppress(Literal(':')) + LineEnd()).setResultsName('label').setParseAction(Label.from_parsing)
         comment_line = Group(Suppress(Literal(';')) + restOfLine()).setResultsName('comment').setParseAction(Comment.from_parsing)
@@ -101,17 +101,17 @@ class FurbyAssembler(object):
             operand = operand.lstrip('$')
             if operand.endswith(',X'):
                 operand.rstrip(',X')
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 if value > 0xFF:
                     type = AddressValue.TYPE_ABSOLUTE_INDEXED_X
                 else:
                     type = AddressValue.TYPE_ZERO_PAGED_INDEXED_X
             elif operand.endswith(',Y'):
                 operand.rstrip(',Y')
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 type = AddressValue.TYPE_ABSOLUTE_INDEXED_Y
             else:
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 if value > 0xFF:
                     type = AddressValue.TYPE_ABSOLUTE
                 else:
@@ -121,21 +121,21 @@ class FurbyAssembler(object):
         elif operand.startswith('#'):
             logger.debug('Parse operand %s as numerical value', operand)
             #TODO depending on the op code this could be an address or just a numerical value....
-            return FurbyAssembler.parse_number_string(operand)
+            return SunPlus6502Assembler.parse_number_string(operand)
         elif operand.startswith('($'):
             logger.debug('Parse operand %s as indirect or indexed address value', operand)
             operand = operand.lstrip('($')
             if operand.endswith(',X)'):
                 operand.rstrip(',X)')
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 type = AddressValue.TYPE_INDEXED_INDIRECT
             elif operand.endswith('),Y'):
                 operand.rstrip('),Y')
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 type = AddressValue.TYPE_INDIRECT_INDEXED
             else:
                 operand.rstrip(')')
-                value = FurbyAssembler.parse_number_string(operand)
+                value = SunPlus6502Assembler.parse_number_string(operand)
                 type = AddressValue.TYPE_INDIRECT
             return AddressValue(value, type)
         else:
@@ -315,4 +315,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=selected_level)
     logger = logging.getLogger(__name__)
 
-    fasm = FurbyAssembler(args.input)
+    fasm = SunPlus6502Assembler(args.input)
