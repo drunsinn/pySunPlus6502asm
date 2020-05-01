@@ -38,12 +38,16 @@ class AddressValue(object):
     TYPE_INDEXED_INDIRECT = 6
     TYPE_INDIRECT_INDEXED = 7
     TYPE_INDIRECT = 8
-    TYPE_LABEL = 9
+    TYPE_IMMEDIATE = 9
+    TYPE_LABEL = 10
+    TYPE_IMPLIED = 11
     def __init__(self, value, type):
         self.__value = value
         self.__type = type
     def get_type(self):
         return self.__type
+    def get_value(self):
+        return self.__value
 
 class AssemblyInstruction(object):
     INSTRUCTION_ADC = 0
@@ -108,64 +112,35 @@ class AssemblyInstruction(object):
     INSTRUCTION_TYA = 59
 
     KNOWN_INSTRUCTIONS = {
-        'ADC' : INSTRUCTION_ADC,
-        'AND' : INSTRUCTION_AND,
-        'ASL' : INSTRUCTION_ASL,
-        'BCC' : INSTRUCTION_BCC,
-        'BCS' : INSTRUCTION_BCS,
-        'BEQ' : INSTRUCTION_BEQ,
-        'BMI' : INSTRUCTION_BMI,
-        'BNE' : INSTRUCTION_BNE,
-        'BPL' : INSTRUCTION_BPL,
-        'BVC' : INSTRUCTION_BVC,
-        'BVS' : INSTRUCTION_BVS,
-        'BIT' : INSTRUCTION_BIT,
-        'CLC' : INSTRUCTION_CLC,
-        'CLD' : INSTRUCTION_CLD,
-        'CLI' : INSTRUCTION_CLI,
-        'CLR' : INSTRUCTION_CLR,
-        'CLV' : INSTRUCTION_CLV,
-        'CMP' : INSTRUCTION_CMP,
-        'CPX' : INSTRUCTION_CPX,
-        'CPY' : INSTRUCTION_CPY,
-        'DEC' : INSTRUCTION_DEC,
-        'DEX' : INSTRUCTION_DEX,
-        'DEY' : INSTRUCTION_DEY,
-        'EOR' : INSTRUCTION_EOR,
-        'INC' : INSTRUCTION_INC,
-        'INV' : INSTRUCTION_INV,
-        'INX' : INSTRUCTION_INX,
-        'INY' : INSTRUCTION_INY,
-        'JMP' : INSTRUCTION_JMP,
-        'JSR' : INSTRUCTION_JSR,
-        'LDA' : INSTRUCTION_LDA,
-        'LDX' : INSTRUCTION_LDX,
-        'LDY' : INSTRUCTION_LDY,
-        'LSR' : INSTRUCTION_LSR,
-        'NOP' : INSTRUCTION_NOP,
-        'ORA' : INSTRUCTION_ORA,
-        'PHA' : INSTRUCTION_PHA,
-        'PHP' : INSTRUCTION_PHP,
-        'PLA' : INSTRUCTION_PLA,
-        'PLP' : INSTRUCTION_PLP,
-        'ROL' : INSTRUCTION_ROL,
-        'ROR' : INSTRUCTION_ROR,
-        'RTI' : INSTRUCTION_RTI,
-        'RTS' : INSTRUCTION_RTS,
-        'SBC' : INSTRUCTION_SBC,
-        'SEC' : INSTRUCTION_SEC,
-        'SED' : INSTRUCTION_SED,
-        'SEI' : INSTRUCTION_SEI,
-        'SET' : INSTRUCTION_SET,
-        'STA' : INSTRUCTION_STA,
-        'STX' : INSTRUCTION_STX,
-        'STY' : INSTRUCTION_STY,
-        'TAX' : INSTRUCTION_TAX,
-        'TAY' : INSTRUCTION_TAY,
-        'TST' : INSTRUCTION_TST,
-        'TSX' : INSTRUCTION_TSX,
-        'TXA' : INSTRUCTION_TXA,
-        'TXS' : INSTRUCTION_TXS
+        'ADC' : INSTRUCTION_ADC, 'AND' : INSTRUCTION_AND,
+        'ASL' : INSTRUCTION_ASL, 'BCC' : INSTRUCTION_BCC,
+        'BCS' : INSTRUCTION_BCS, 'BEQ' : INSTRUCTION_BEQ,
+        'BMI' : INSTRUCTION_BMI, 'BNE' : INSTRUCTION_BNE,
+        'BPL' : INSTRUCTION_BPL, 'BVC' : INSTRUCTION_BVC,
+        'BVS' : INSTRUCTION_BVS, 'BIT' : INSTRUCTION_BIT,
+        'CLC' : INSTRUCTION_CLC, 'CLD' : INSTRUCTION_CLD,
+        'CLI' : INSTRUCTION_CLI, 'CLR' : INSTRUCTION_CLR,
+        'CLV' : INSTRUCTION_CLV, 'CMP' : INSTRUCTION_CMP,
+        'CPX' : INSTRUCTION_CPX, 'CPY' : INSTRUCTION_CPY,
+        'DEC' : INSTRUCTION_DEC, 'DEX' : INSTRUCTION_DEX,
+        'DEY' : INSTRUCTION_DEY, 'EOR' : INSTRUCTION_EOR,
+        'INC' : INSTRUCTION_INC, 'INV' : INSTRUCTION_INV,
+        'INX' : INSTRUCTION_INX, 'INY' : INSTRUCTION_INY,
+        'JMP' : INSTRUCTION_JMP, 'JSR' : INSTRUCTION_JSR,
+        'LDA' : INSTRUCTION_LDA, 'LDX' : INSTRUCTION_LDX,
+        'LDY' : INSTRUCTION_LDY, 'LSR' : INSTRUCTION_LSR,
+        'NOP' : INSTRUCTION_NOP, 'ORA' : INSTRUCTION_ORA,
+        'PHA' : INSTRUCTION_PHA, 'PHP' : INSTRUCTION_PHP,
+        'PLA' : INSTRUCTION_PLA, 'PLP' : INSTRUCTION_PLP,
+        'ROL' : INSTRUCTION_ROL, 'ROR' : INSTRUCTION_ROR,
+        'RTI' : INSTRUCTION_RTI, 'RTS' : INSTRUCTION_RTS,
+        'SBC' : INSTRUCTION_SBC, 'SEC' : INSTRUCTION_SEC,
+        'SED' : INSTRUCTION_SED, 'SEI' : INSTRUCTION_SEI,
+        'SET' : INSTRUCTION_SET, 'STA' : INSTRUCTION_STA,
+        'STX' : INSTRUCTION_STX, 'STY' : INSTRUCTION_STY,
+        'TAX' : INSTRUCTION_TAX, 'TAY' : INSTRUCTION_TAY,
+        'TST' : INSTRUCTION_TST, 'TSX' : INSTRUCTION_TSX,
+        'TXA' : INSTRUCTION_TXA, 'TXS' : INSTRUCTION_TXS
     }
     # INSTRUCTION_DATA = {
     #     AddressValue.TYPE_ABSOLUTE :                {'opcode':0x00, 'numbytes':0, 'numcycles':2},
@@ -178,168 +153,226 @@ class AssemblyInstruction(object):
     #     AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':0, 'numcycles':2}, # (Adr)
     #     AddressValue.TYPE_LABEL :                   {'opcode':0x00, 'numbytes':0, 'numcycles':2},
     # }
+
     @staticmethod
     def parse_opcode(token):
         '''this converts the op code string to a easiert to handle integer'''
         #print(token.dump())
         op_code = token['op_code'].upper()
         return AssemblyInstruction.KNOWN_INSTRUCTIONS.get(op_code, None)
-    @staticmethod
-    def decode_instruction_data(instruction_data, operand):
+
+    def __init__(self, inst_data, operand=None):
+        self.__op_code = -1
+        self.__num_bytes = -1
+        self.__num_cycles = -1
+        self.__operand = operand
+        if self.__operand is not None:
+            if isinstance(self.__operand, int): # Adress type immediate
+                self.__op_code = inst_data[AddressValue.TYPE_IMMEDIATE]['opcode']
+                self.__num_bytes = inst_data[AddressValue.TYPE_IMMEDIATE]['numbytes']
+                self.__num_cycles = inst_data[AddressValue.TYPE_IMMEDIATE]['numcycles']
+            elif isinstance(self.__operand, AddressValue):
+                if self.__operand.get_type() is AddressValue.TYPE_LABEL:
+                    '''if the operand is a label we have to wait until the actual
+                    assembly of the program to get an address'''
+                    pass
+                else:
+                    self.__op_code, self.__num_bytes, self.__num_cycles = self.decode_instruction_data(inst_data, self.__operand)
+            else:
+                raise NotImplementedError('somthing went wrong or we found a case that we didnt think about')
+        else:
+            self.__op_code = inst_data[AddressValue.TYPE_IMPLIED]['opcode']
+            self.__num_bytes = inst_data[AddressValue.TYPE_IMPLIED]['numbytes']
+            self.__num_cycles = inst_data[AddressValue.TYPE_IMPLIED]['numcycles']
+
+    def decode_instruction_data(self, instruction_data, operand):
         data = instruction_data.get(operand.get_type(), None)
         if data is not None:
             return data['opcode'], data['numbytes'], data['numcycles']
         else:
             raise ValueError('unknonw Adress Type for instuction')
 
+    def to_bin(self):
+        if isinstance(self.__operand, int):
+            value = self.__operand
+        else:
+            value = self.__operand.get_value()
+        if self.__num_bytes is 1:
+            return '{:02X}'.format(self.__op_code)
+        elif self.__num_bytes is 2:
+            if value > 0xFF:
+                raise ValueError('operand value to big for op code')
+            return '{:02X}{:02X}'.format(self.__op_code, value)
+        elif self.__num_bytes is 3:
+            return '{:02X}{:04X}'.format(self.__op_code, value)
+        else:
+            raise ValueError('unexpected number of bytes for operation')
+
 class Inst_ADC(AssemblyInstruction):
     INSTRUCTION_DATA = {
-        AddressValue.TYPE_ABSOLUTE :                {'opcode':0x6D, 'numbytes':3, 'numcycles':4},
-        AddressValue.TYPE_ZERO_PAGED :              {'opcode':0x65, 'numbytes':2, 'numcycles':3},
-        AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0x7D, 'numbytes':3, 'numcycles':4},
-        AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x79, 'numbytes':3, 'numcycles':4},
-        AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x75, 'numbytes':2, 'numcycles':4},
-        AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x61, 'numbytes':2, 'numcycles':6}, # (Adr,X)
-        AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x71, 'numbytes':2, 'numcycles':6}, # (Adr),Y
+        AddressValue.TYPE_IMMEDIATE :               {'opcode':0x56, 'numbytes':2, 'numcycles':2},
+        AddressValue.TYPE_ABSOLUTE :                {'opcode':0x57, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_ZERO_PAGED :              {'opcode':0x17, 'numbytes':2, 'numcycles':3},
+        AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0x5F, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5E, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x1F, 'numbytes':2, 'numcycles':4},
+        AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x16, 'numbytes':2, 'numcycles':6}, # (Adr,X)
+        AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1E, 'numbytes':2, 'numcycles':6}, # (Adr),Y
         #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
         #AddressValue.TYPE_LABEL :                   {'opcode':0x00, 'numbytes':2, 'numcycles':2},
     }
     def __init__(self, operand):
-        self.__operand = operand
-        self.__op_code = -1
-        self.__num_bytes = -1
-        self.__num_cycles = -1
-        if isinstance(self.__operand, int):
-            self.__op_code = 0x69
-            self.__num_bytes = 2
-            self.__num_cycles = 2
-        elif isinstance(self.__operand, AddressValue):
-            if self.__operand.get_type() is AddressValue.TYPE_LABEL:
-                '''if the operand is a label we have to wait until the actual
-                assembly of the program to get an address'''
-                pass
-            else:
-                self.__op_code, self.__num_bytes, self.__num_cycles = AssemblyInstruction.decode_instruction_data(self.INSTRUCTION_DATA, self.__operand)
-        else:
-            raise NotImplementedError('somthing went wrong or we found a case that we didnt think about')
+        super().__init__(self.INSTRUCTION_DATA, operand)
+
+
+class Inst_AND(AssemblyInstruction):
+    INSTRUCTION_DATA = {
+        AddressValue.TYPE_IMMEDIATE :               {'opcode':0x54, 'numbytes':2, 'numcycles':2},
+        AddressValue.TYPE_ZERO_PAGED :              {'opcode':0x15, 'numbytes':2, 'numcycles':3},
+        AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x1D, 'numbytes':2, 'numcycles':4},
+        AddressValue.TYPE_ABSOLUTE :                {'opcode':0x55, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0x5D, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5C, 'numbytes':3, 'numcycles':4},
+        AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x14, 'numbytes':2, 'numcycles':6}, # (Adr,X)
+        AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
+        #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
+    }
+    def __init__(self, operand):
+        super().__init__(self.INSTRUCTION_DATA, operand)
+
+
+class Inst_ASL(AssemblyInstruction):
+    INSTRUCTION_DATA = {
+        AddressValue.TYPE_ACCUMULATOR :             {'opcode':0xC0, 'numbytes':1, 'numcycles':2},
+        AddressValue.TYPE_ZERO_PAGED :              {'opcode':0x81, 'numbytes':2, 'numcycles':5},
+        AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x89, 'numbytes':2, 'numcycles':6},
+        AddressValue.TYPE_ABSOLUTE :                {'opcode':0xC1, 'numbytes':3, 'numcycles':6},
+        AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0xC9, 'numbytes':3, 'numcycles':6},
+        #AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5C, 'numbytes':3, 'numcycles':4},
+        #AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x14, 'numbytes':2, 'numcycles':6}, # (Adr,X)
+        #AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
+        #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
+    }
+    def __init__(self, operand):
+        super().__init__(self.INSTRUCTION_DATA, operand)
+
 
 class Inst_CLC(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x48, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x18
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_CLD(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x6A, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xD8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_CLI(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x4A, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x58
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_CLV(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x78, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xB8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_DEX(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE2, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xCA
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_DEY(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x60, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x88
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_INX(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x72, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xE8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_INY(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x62, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xC8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_NOP(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF2, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xEA
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_PHA(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x42, 'numbytes':1, 'numcycles':3}}
     def __init__(self):
-        self.__op_code = 0x48
-        self.__num_bytes = 1
-        self.__num_cycles = 3
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_PHP(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x40, 'numbytes':1, 'numcycles':3}}
     def __init__(self):
-        self.__op_code = 0x08
-        self.__num_bytes = 1
-        self.__num_cycles = 3
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_PLA(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x52, 'numbytes':1, 'numcycles':4}}
     def __init__(self):
-        self.__op_code = 0x68
-        self.__num_bytes = 1
-        self.__num_cycles = 4
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_PLP(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x50, 'numbytes':1, 'numcycles':4}}
     def __init__(self):
-        self.__op_code = 0x28
-        self.__num_bytes = 1
-        self.__num_cycles = 4
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_RTI(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x02, 'numbytes':1, 'numcycles':6}}
     def __init__(self):
-        self.__op_code = 0x40
-        self.__num_bytes = 1
-        self.__num_cycles = 6
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_RTS(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x12, 'numbytes':1, 'numcycles':6}}
     def __init__(self):
-        self.__op_code = 0x60
-        self.__num_bytes = 1
-        self.__num_cycles = 6
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_SEC(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x58, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x38
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_SED(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x7A, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xF8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_SEI(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x5A, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x78
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TAX(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF0, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xAA
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TAY(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x70, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xA8
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TSX(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xF8, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0xBA
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TXA(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE0, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x8A
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TXS(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0xE8, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x9A
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)
+
 class Inst_TYA(AssemblyInstruction):
+    INSTRUCTION_DATA = {AddressValue.TYPE_IMPLIED : {'opcode':0x68, 'numbytes':1, 'numcycles':2}}
     def __init__(self):
-        self.__op_code = 0x98
-        self.__num_bytes = 1
-        self.__num_cycles = 2
+        super().__init__(self.INSTRUCTION_DATA)

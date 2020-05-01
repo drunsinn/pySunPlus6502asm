@@ -12,12 +12,7 @@ from pyparsing import (ParserElement, Group, Optional, Word, alphas, alphanums,
                       Suppress, Literal, restOfLine, ParseException, Or, LineEnd,
                       LineStart, CaselessKeyword)
 from AssemblerInstructions import *
-
-class PreInst_Include(object):
-    def __init__(self, filename):
-        self.__filename = filename
-    def get_filename(self):
-        return self.__filename
+from PreProcessInstructions import *
 
 class SunPlus6502Assembler(object):
     def __init__(self, main_asm_file):
@@ -181,9 +176,9 @@ class SunPlus6502Assembler(object):
         if op_code is AssemblyInstruction.INSTRUCTION_ADC:
             return Inst_ADC(operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_AND:
-            raise NotImplementedError() #TODO
+            return Inst_AND(operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_ASL:
-            raise NotImplementedError() #TODO
+            return Inst_ASL(operand)
         elif op_code is AssemblyInstruction.INSTRUCTION_BCC:
             raise NotImplementedError() #TODO
         elif op_code is AssemblyInstruction.INSTRUCTION_BCS:
@@ -295,7 +290,7 @@ class SunPlus6502Assembler(object):
         elif op_code is AssemblyInstruction.INSTRUCTION_TYA:
             return Inst_TYA()
         elif 'include' in op_code:
-            raise NotImplementedError() #TODO
+            return PreInst_Include(operand.get_value())
         else:
             print(token.dump())
             raise NotImplementedError('unknown op code %s'%op_code)
