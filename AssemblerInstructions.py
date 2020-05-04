@@ -177,7 +177,8 @@ class AssemblyInstruction(object):
             elif isinstance(self.__operand, AddressValue):
                 if self.__operand.get_type() is AddressValue.TYPE_LABEL:
                     '''if the operand is a label we have to wait until the actual
-                    assembly of the program to get an address'''
+                    assembly of the program to get an address
+                    What should we do in this case????'''
                     pass
                 else:
                     self.__op_code, self.__num_bytes, self.__num_cycles = self.decode_instruction_data(inst_data, self.__operand)
@@ -190,6 +191,12 @@ class AssemblyInstruction(object):
 
     def get_label(self):
         return self.__label
+
+    def get_operand(self):
+        return self.__operand
+
+    def get_cycles(self):
+        return self.__num_cycles
 
     def decode_instruction_data(self, instruction_data, operand):
         data = instruction_data.get(operand.get_type(), None)

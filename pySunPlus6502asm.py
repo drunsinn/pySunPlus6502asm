@@ -16,18 +16,20 @@ from PreProcessInstructions import *
 
 class SunPlus6502Assembler(object):
     def __init__(self, main_asm_file):
-        '''steps: - none of this works currently!!!!!!
-        1. read file and convert each line to list of objects
-        2. read list while calculating the address of each instruchtion and calculate adress for each label
-        3. replace all labels with thier address
-        4. output instructions as hex file'''
+        '''WIP, not for actual use!'''
         self.logger = logging.getLogger(__name__)
         self.main_asm_file = main_asm_file
         self.__build_grammar()
         instructions = self.parse_file(main_asm_file)
         for i, instr in enumerate(instructions):
             print("%d : %s : %s" % (i, type(instr), instr))
+
         self.check_labels(instructions)
+
+        label_addr_map = self.calculate_lable_pos(instructions)
+
+        print(label_addr_map)
+
 
 
     def __build_grammar(self):
@@ -84,6 +86,9 @@ class SunPlus6502Assembler(object):
                         if instr.get_label() is not None:
                             instructions.append(instr.get_label())
                         instructions.append(instr)
+                    elif isinstance(instr, Comment):
+                        # comments are ignored
+                        pass
                     else:
                         instructions.append(instr)
                 else:
@@ -313,14 +318,54 @@ class SunPlus6502Assembler(object):
             raise NotImplementedError('unknown op code %s'%op_code)
 
     def check_labels(self, instructions):
+        '''check list of instructions for dublicates and missing labels'''
         known_label = list()
         for instr in instructions:
             if isinstance(instr, Label):
                 if instr.get_name() in known_label:
+                    self.logger.error('multible definitions for label %s', instr.get_name())
                     raise Exception('multible definitions for label %s', instr.get_name())
                 else:
                     known_label.append(instr.get_name())
-        print(known_label)
+        self.logger.info('found %d label definitions', len(known_label))
+
+        for instr in instructions:
+            if isinstance(instr, AssemblyInstruction):
+                operand = instr.get_operand()
+                if isinstance(operand, AddressValue) and operand.get_type() is AddressValue.TYPE_LABEL:
+                    label_name = operand.get_value()
+                    if label_name not in known_label:
+                        self.logger.error('label %s used but not defined', label_name)
+                        raise Exception('label %s used but not defined', label_name)
+        self.logger.info('all used labels found in definition')
+
+    def calculate_lable_pos(self, instructions):
+        '''this is where each label definition gets assigned its label'''
+        addr = 0x00
+        label_addr = dict()
+        for instr in instructions:
+            if isinstance(instr, Label):
+                label_addr[instr.get_name()] = addr
+                self.logger.debug("{:s}@{:04X}".format(instr.get_name(), addr))
+            elif isinstance(instr, AssemblyInstruction):
+                addr += instr.get_cycles()
+            else:
+                self.logger.error('unknow type encountered {:s}'.format(instr))
+                raise Exception('unknow type encountered {:s}'.format(instr))
+        self.logger.info('assigned {:d} labels, program length is {:04X}'.format(len(label_addr), addr))
+        return label_addr
+
+    def replace_label(self, instructions, label_addr_map):
+        pass
+        # for instr in instructions:
+        #     if isinstance(instr, AssemblyInstruction):
+        #         operand = instr.get_operand()
+        #         if isinstance(operand, AddressValue) and operand.get_type() is AddressValue.TYPE_LABEL:
+        #             label_name = operand.get_value()
+        #             if label_name not in known_label:
+        #                 self.logger.error('label %s used but not defined', label_name)
+        #                 raise Exception('label %s used but not defined', label_name)
+
 
 
 if __name__ == "__main__":
