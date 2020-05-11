@@ -28,7 +28,13 @@ class SunPlus6502Assembler(object):
 
         label_addr_map = self.calculate_lable_pos(instructions)
 
+        self.replace_label(instructions, label_addr_map)
+
         print(label_addr_map)
+
+        for i, instr in enumerate(instructions):
+            if isinstance(instr, AssemblyInstruction):
+                print('line {:04d} translates to {:s}'.format(i, instr.to_bin()))
 
 
 
@@ -356,16 +362,17 @@ class SunPlus6502Assembler(object):
         return label_addr
 
     def replace_label(self, instructions, label_addr_map):
-        pass
-        # for instr in instructions:
-        #     if isinstance(instr, AssemblyInstruction):
-        #         operand = instr.get_operand()
-        #         if isinstance(operand, AddressValue) and operand.get_type() is AddressValue.TYPE_LABEL:
-        #             label_name = operand.get_value()
-        #             if label_name not in known_label:
-        #                 self.logger.error('label %s used but not defined', label_name)
-        #                 raise Exception('label %s used but not defined', label_name)
-
+        for instr in instructions:
+            if isinstance(instr, AssemblyInstruction):
+                operand = instr.get_operand()
+                if isinstance(operand, AddressValue) and operand.get_type() is AddressValue.TYPE_LABEL:
+                    label_name = operand.get_value()
+                    if label_name not in label_addr_map:
+                        self.logger.error('label {:s} used but not defined'.format(label_name))
+                        raise Exception('label {:s} used but not defined'.format(label_name))
+                    else:
+                        self.logger.info('replace labele {:s} in instruction {:02X}h with address {:04X}h used but not defined'.format(label_name, instr.get_opcode(), label_addr_map[label_name]))
+                        instr.replace_label(label_addr_map[label_name])
 
 
 if __name__ == "__main__":

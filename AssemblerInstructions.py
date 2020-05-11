@@ -178,8 +178,10 @@ class AssemblyInstruction(object):
                 if self.__operand.get_type() is AddressValue.TYPE_LABEL:
                     '''if the operand is a label we have to wait until the actual
                     assembly of the program to get an address
-                    What should we do in this case????'''
-                    pass
+                    What should we do in this case? -> Set it to absolute?'''
+                    self.__op_code = inst_data[AddressValue.TYPE_ABSOLUTE]['opcode']
+                    self.__num_bytes = inst_data[AddressValue.TYPE_ABSOLUTE]['numbytes']
+                    self.__num_cycles = inst_data[AddressValue.TYPE_ABSOLUTE]['numcycles']
                 else:
                     self.__op_code, self.__num_bytes, self.__num_cycles = self.decode_instruction_data(inst_data, self.__operand)
             else:
@@ -198,6 +200,12 @@ class AssemblyInstruction(object):
     def get_cycles(self):
         return self.__num_cycles
 
+    def get_opcode(self):
+        return self.__op_code
+
+    def replace_label(self, address_value):
+        self.__operand = AddressValue(address_value, AddressValue.TYPE_ABSOLUTE)
+
     def decode_instruction_data(self, instruction_data, operand):
         data = instruction_data.get(operand.get_type(), None)
         if data is not None:
@@ -208,8 +216,11 @@ class AssemblyInstruction(object):
     def to_bin(self):
         if isinstance(self.__operand, int):
             value = self.__operand
+        elif self.__operand is None:
+            return '{:02X}'.format(self.__op_code)
         else:
             value = self.__operand.get_value()
+
         if self.__num_bytes is 1:
             return '{:02X}'.format(self.__op_code)
         elif self.__num_bytes is 2:
@@ -229,10 +240,8 @@ class Inst_ADC(AssemblyInstruction):
         AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0x5F, 'numbytes':3, 'numcycles':4},
         AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5E, 'numbytes':3, 'numcycles':4},
         AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x1F, 'numbytes':2, 'numcycles':4},
-        AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x16, 'numbytes':2, 'numcycles':6}, # (Adr,X)
-        AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1E, 'numbytes':2, 'numcycles':6}, # (Adr),Y
-        #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
-        #AddressValue.TYPE_LABEL :                   {'opcode':0x00, 'numbytes':2, 'numcycles':2},
+        AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x16, 'numbytes':2, 'numcycles':6},
+        AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1E, 'numbytes':2, 'numcycles':6},
     }
     def __init__(self, label, operand):
         super().__init__(label, self.INSTRUCTION_DATA, operand)
@@ -248,7 +257,6 @@ class Inst_AND(AssemblyInstruction):
         AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5C, 'numbytes':3, 'numcycles':4},
         AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x14, 'numbytes':2, 'numcycles':6}, # (Adr,X)
         AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
-        #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
     }
     def __init__(self, label, operand):
         super().__init__(label, self.INSTRUCTION_DATA, operand)
@@ -261,10 +269,6 @@ class Inst_ASL(AssemblyInstruction):
         AddressValue.TYPE_ZERO_PAGED_INDEXED_X :    {'opcode':0x89, 'numbytes':2, 'numcycles':6},
         AddressValue.TYPE_ABSOLUTE :                {'opcode':0xC1, 'numbytes':3, 'numcycles':6},
         AddressValue.TYPE_ABSOLUTE_INDEXED_X :      {'opcode':0xC9, 'numbytes':3, 'numcycles':6},
-        #AddressValue.TYPE_ABSOLUTE_INDEXED_Y :      {'opcode':0x5C, 'numbytes':3, 'numcycles':4},
-        #AddressValue.TYPE_INDEXED_INDIRECT :        {'opcode':0x14, 'numbytes':2, 'numcycles':6}, # (Adr,X)
-        #AddressValue.TYPE_INDIRECT_INDEXED :        {'opcode':0x1C, 'numbytes':2, 'numcycles':6}, # (Adr),Y
-        #AddressValue.TYPE_INDIRECT :                {'opcode':0x00, 'numbytes':2, 'numcycles':2}, # (Adr)
     }
     def __init__(self, label, operand):
         super().__init__(label, self.INSTRUCTION_DATA, operand)
